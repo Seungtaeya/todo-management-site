@@ -1,0 +1,142 @@
+<!DOCTYPE html >
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title> 할 일  </title>
+</head>
+<body class="bg-light">
+<div class="container mt-4">
+    <a href="/" class="text-decoration-none"><h1 class="mb-4"> 할 일  </h1></a>
+    <div hidden="hidden" th:data-member-id="${session.loginMember}"> </div>
+    <input type="hidden" id="todoId" th:value="${todo.id}" class="form-control">
+
+    <div class="mb-3">
+        <input type="text" name="title" th:value="${todo.title}" id="title" disabled class="form-control">
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">
+            <label for="status" class="form-label">상태</label>
+            <select id="status" name="status" disabled class="form-select">
+                <option disabled selected >옵션 선택</option>
+                <option value="TODO" name="status" th:selected="${todo.status.name() == 'TODO'}">할 일</option>
+                <option value="IN_PROGRESS" name="status" th:selected="${todo.status.name() == 'IN_PROGRESS'}">진행 중</option>
+                <option value="DONE" name="status" th:selected="${todo.status.name() == 'DONE'}">완료</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="mb-3">
+        <label for="content" class="form-label">내용</label>
+        <textarea id="content" name="content" th:text="${todo.content}" disabled class="form-control" rows="6"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="dueDate" class="form-label">마감일</label>
+        <input type="date" name="dueDate" th:value="${todo.dueDate}" id="dueDate" disabled class="form-control">
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" id="editBtn" onclick="clickEditBtn()" class="btn btn-primary">수정</button>
+        <button type="button" disabled id="saveBtn" onclick="clickSaveBtn()" class="btn btn-success">저장</button>
+        <button type="button" id="deleteBtn" onclick="clickDeleteBtn()" class="btn btn-danger">삭제</button>
+    </div>
+</div>
+<script>
+    const todoId = document.getElementById("todoId").value;
+
+    const editBtn = document.getElementById("editBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const title = document.getElementById("title");
+    const status = document.getElementById("status");
+    const content = document.getElementById("content");
+    const dueDate = document.getElementById("dueDate");
+
+
+
+    function clickDeleteBtn() {
+        if(!confirm("정말 삭제 하시겠습니까?")) {
+            return;
+        }
+        fetch(`/api/todos/${todoId}`, {
+            method: "DELETE",
+        })
+            .then(async response => {
+                if(response.status === 403) {
+                    const message = await response.json();
+                    alert(message.message);
+                    return null;
+                }
+                if(!response.ok) {
+                    throw new Error("삭제 실패");
+                }
+                alert("삭제 성공");
+
+                location.href = "/"
+            })
+            .catch(error => {
+                console.log(error);
+                alert("삭제 중 오류가 발생했습니다.");
+            });
+    }
+
+    function clickEditBtn() {
+        editBtn.disabled = true;
+        saveBtn.disabled = false;
+        title.disabled = false;
+        status.disabled = false;
+        content.disabled = false;
+        dueDate.disabled = false;
+    }
+    function clickSaveBtn() {
+        let todo = {
+            title: title.value,
+            status: status.value,
+            content: content.value,
+            dueDate: dueDate.value
+        };
+
+        console.log(todo);
+
+        fetch(`/api/todos/${todoId}`, {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(todo)
+        })
+            .then(async response => {
+                if(response.status === 403) {
+                    const error = await response.json();
+                    alert(error.message);
+                    return null;
+                }
+                if(!response.ok){
+                    throw new Error("수정 실패");
+                }
+                return response.json();
+            })
+
+            .then(data => {
+                if(data === null) return;
+
+                alert("수정 완료");
+                saveBtn.disabled = true;
+                editBtn.disabled = false;
+
+                title.disabled = true;
+                status.disabled = true;
+                content.disabled = true;
+                dueDate.disabled = true;
+            })
+            .catch(error => {
+                console.log(error);
+                alert("수정중 오류가 발생했습니다.");
+                return;
+            })
+
+    }
+
+</script>
+</body>
+</html>
